@@ -17,7 +17,7 @@ import BarChart from '../components/charts/BarChart.js';
 import LineChart from '../components/charts/LineChart.js';
 import MonthlyBarChart from '../components/charts/MonthlyBarChart.js';
 import FiltererdJsonFeature from '../components/FiltererdJsonFeature.js';
-import { calculateAverageOfArray, fillDensityColor } from '../helpers/functions.js';
+import { calculateAverageOfArray, fillDensityColor, getSumAnnualDataFromMonthly } from '../helpers/functions.js';
 import DynamicLegend from '../components/legend/DynamicLegend.js';
 import water_pressure_pipe from "../assets/data/water_pressure_pipe.json"
 import water_pressure_structure from "../assets/data/water_pressure_structure.json"
@@ -42,7 +42,7 @@ const SingleSelectionsLayers = [
         data: DEWA_recovery
     }
 
-,
+    ,
 
 
 
@@ -70,8 +70,14 @@ const xData = [
     "Oct-21", "Nov-21", "Dec-21",
     "Jan-22", "Feb-22", "Mar-22", "Apr-22", "May-22", "Jun-22", "Jul-22", "Aug-22", "Sep-22", "Oct-22", "Nov-22", "Dec-22",
     "Jan-23", "Feb-23", "Mar-23", "Apr-23", "May-23", "Jun-23", "Jul-23", "Aug-23", "Sep-23", "Oct-23", "Nov-23", "Dec-23",
-    "Jan-24", "Feb-24", "Mar-24", "Apr-24", "May-24", "Jun-24", "Jul-24", "Aug-24"
+    "Jan-24", "Feb-24", "Mar-24", "Apr-24", "May-24", "Jun-24", "Jul-24", "Aug-24", "Sep-24"
 ];
+
+const months = ["October", "November", "December",
+    "January", "February", "March",
+    "April", "May", "June",
+    "July", "August", "September"
+]
 
 
 
@@ -82,11 +88,17 @@ const DEWAConsumption = () => {
     const [selectedPointData, setSelectedPointData] = useState(null);
     const [selectedData, setSelectedData] = useState(SingleSelectionsLayers[0].data);
     const [selectedYear, setSelectedYear] = useState('2023');
-
+    const [selectedMonth, setSelectedMonth] = useState('1');
     const [selectedSingleLayer, setSelectedSingleLayer] = useState(SingleSelectionsLayers[0].value);
     const [selectedMultiLayer, setSelectedMultiLayer] = useState([SingleSelectionsLayers[0].value]);
 
     const { setIsLoading } = useLoaderContext();
+
+
+
+    const handleMonthSelection = (e) => {
+        setSelectedMonth(e.target.value)
+    }
 
 
     const handleMultiLayerSelection = (e) => {
@@ -116,6 +128,18 @@ const DEWAConsumption = () => {
         const selectedItem = BaseMapsLayers.find((item) => item.name === e.target.value);
         setSelectedBasemapLayer(selectedItem);
     };
+
+
+    const getSelectedMonthData = (array, month) => {
+        const adjustedMonth = month - 1;
+
+        return [
+            array[adjustedMonth] || 0,           // Year 1 (Oct 2021 - Sep 2022)
+            array[adjustedMonth + 12] || 0,     // Year 2 (Oct 2022 - Sep 2023)
+            array[adjustedMonth + 24] || 0,     // Year 3 (Oct 2023 - Sep 2024)
+        ];
+    };
+
 
 
 
@@ -536,7 +560,7 @@ const DEWAConsumption = () => {
                                     <>
                                         <div className='plots_heading_container'>
                                             <div className='plots_heading'>
-                                                <h5>Electricity Consumption (KWH)</h5>
+                                                <h5>Monthly Electricity Consumption (KWH)</h5>
                                             </div>
                                         </div>
 
@@ -586,7 +610,187 @@ const DEWAConsumption = () => {
                                             type="line"
                                         />
 
+
+                                        <div className='plots_heading_container'>
+                                            <div className='plots_heading'>
+                                                <h5>Annual Electricity Consumption (KWH)</h5>
+                                            </div>
+                                        </div>
+
+
+                                        <ReactApexChart options={{
+                                            chart: {
+                                                height: '100%',
+                                                type: 'bar',
+                                                zoom: {
+                                                    enabled: false, // Disable zoom on scroll
+                                                },
+                                            },
+                                            plotOptions: {
+                                                bar: {
+                                                    dataLabels: {
+                                                        position: 'top',
+                                                    }
+                                                }
+                                            },
+
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: function (val) {
+                                                    return `${Math.round(val)}`;
+                                                },
+                                                offsetY: -20,
+                                                background: {
+                                                    enabled: true,
+                                                    foreColor: '#000', // Sets the text foreground color
+                                                    borderRadius: 2,
+                                                    padding: 4,
+                                                    opacity: 0.7,
+                                                    borderWidth: 1,
+                                                    borderColor: '#fff'
+                                                }
+                                            },
+
+
+                                            stroke: {
+                                                curve: 'straight',
+                                                width: 2
+                                            },
+
+                                            xaxis: {
+
+                                                categories: [2021, 2022, 2023],
+                                                labels: {
+                                                    rotate: 0,
+                                                },
+                                                tickPlacement: 'on',
+                                            },
+
+
+                                            yaxis: {
+                                                title: {
+                                                    text: 'Electricity Consumption (KWH)'
+                                                },
+                                                labels: {
+                                                    formatter: function (val) {
+                                                        return Math.round(val); // Rounds to the nearest integer
+                                                    },
+                                                },
+                                            },
+                                            tooltip: {
+                                                shared: true,
+                                                intersect: false,
+
+                                            },
+
+                                        }}
+                                            series={[
+                                                {
+                                                    name: 'Electricity Consumption (KWH)',
+                                                    type: 'bar',
+                                                    data: getSumAnnualDataFromMonthly(selectedPointData.ELECTRICITY),
+                                                    color: '#011a52',
+
+                                                },
+                                            ]} type="bar" />
+                                        <p>** The year is considered from October to September.</p>
+
+                                        <br />
+                                        <br />
+
+                                        <div className='plots_heading_container'>
+                                            <div className='plots_heading'>
+                                                <h5>Compare Electricity Consumption (KWH) for a month over years</h5>
+                                            </div>
+                                        </div>
+
+                                        <div className='chart_year_container' >
+                                            <label>Month: &nbsp; </label>
+                                            <select value={selectedMonth} onChange={handleMonthSelection} style={{ marginRight: "10px" }}>
+                                                {months.map((month, index) => (
+                                                    <option value={index + 1} key={index}>
+                                                        {month}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                        </div>
+                                        <ReactApexChart options={{
+                                            chart: {
+                                                height: '100%',
+                                                type: 'bar',
+                                                zoom: {
+                                                    enabled: false, // Disable zoom on scroll
+                                                },
+                                            },
+                                            stroke: {
+                                                curve: 'straight',
+                                                width: 2
+                                            },
+                                            plotOptions: {
+                                                bar: {
+                                                    dataLabels: {
+                                                        position: 'top',
+                                                    }
+                                                }
+                                            },
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: function (val) {
+                                                    return `${Math.round(val)}`;
+                                                },
+                                                offsetY: -20,
+                                                background: {
+                                                    enabled: true,
+                                                    foreColor: '#000', // Sets the text foreground color
+                                                    borderRadius: 2,
+                                                    padding: 4,
+                                                    opacity: 0.7,
+                                                    borderWidth: 1,
+                                                    borderColor: '#fff'
+                                                }
+                                            },
+
+                                            xaxis: {
+
+                                                categories: [2021, 2022, 2023],
+                                                labels: {
+                                                    rotate: 0,
+                                                },
+                                                tickPlacement: 'on',
+                                            },
+
+
+                                            yaxis: {
+                                                title: {
+                                                    text: `Electricity Consumption (KWH)`,
+                                                },
+                                                labels: {
+                                                    formatter: function (val) {
+                                                        return Math.round(val); // Rounds to the nearest integer
+                                                    },
+                                                },
+                                            },
+                                            tooltip: {
+                                                shared: true,
+                                                intersect: false,
+
+                                            },
+
+                                        }} series={[
+                                            {
+                                                name: `${months[selectedMonth - 1]} Electricity Consumption (KWH)`,
+                                                type: 'bar',
+                                                data: getSelectedMonthData(selectedPointData.ELECTRICITY, selectedMonth),
+                                                color: '#ba7c00',
+
+                                            },
+                                        ]} type="bar" />
+
+
+
                                     </>
+
 
                                 )}
 
@@ -594,7 +798,7 @@ const DEWAConsumption = () => {
                                     <>
                                         <div className='plots_heading_container'>
                                             <div className='plots_heading'>
-                                                <h5>Water consumption (IG)</h5>
+                                                <h5>Monthly Water consumption (IG)</h5>
                                             </div>
                                         </div>
 
@@ -645,6 +849,184 @@ const DEWAConsumption = () => {
                                             ]}
                                             type="line"
                                         />
+
+
+                                        <div className='plots_heading_container'>
+                                            <div className='plots_heading'>
+                                                <h5>Annual Water consumption (IG)</h5>
+                                            </div>
+                                        </div>
+
+
+                                        <ReactApexChart options={{
+                                            chart: {
+                                                height: '100%',
+                                                type: 'bar',
+                                                zoom: {
+                                                    enabled: false, // Disable zoom on scroll
+                                                },
+                                            },
+                                            plotOptions: {
+                                                bar: {
+                                                    dataLabels: {
+                                                        position: 'top',
+                                                    }
+                                                }
+                                            },
+
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: function (val) {
+                                                    return `${Math.round(val)}`;
+                                                },
+                                                offsetY: -20,
+                                                background: {
+                                                    enabled: true,
+                                                    foreColor: '#000', // Sets the text foreground color
+                                                    borderRadius: 2,
+                                                    padding: 4,
+                                                    opacity: 0.7,
+                                                    borderWidth: 1,
+                                                    borderColor: '#fff'
+                                                }
+                                            },
+
+
+                                            stroke: {
+                                                curve: 'straight',
+                                                width: 2
+                                            },
+
+                                            xaxis: {
+
+                                                categories: [2021, 2022, 2023],
+                                                labels: {
+                                                    rotate: 0,
+                                                },
+                                                tickPlacement: 'on',
+                                            },
+
+
+                                            yaxis: {
+                                                title: {
+                                                    text: 'Water consumption (IG)'
+                                                },
+                                                labels: {
+                                                    formatter: function (val) {
+                                                        return Math.round(val); // Rounds to the nearest integer
+                                                    },
+                                                },
+                                            },
+                                            tooltip: {
+                                                shared: true,
+                                                intersect: false,
+
+                                            },
+
+                                        }}
+                                            series={[
+                                                {
+                                                    name: 'Water consumption (IG)',
+                                                    type: 'bar',
+                                                    data: getSumAnnualDataFromMonthly(selectedPointData.WATER),
+                                                    color: '#011a52',
+
+                                                },
+                                            ]} type="bar" />
+                                        <p>** The year is considered from October to September.</p>
+                                        <br />
+                                        <br />
+
+                                        <div className='plots_heading_container'>
+                                            <div className='plots_heading'>
+                                                <h5>Compare Water consumption (IG) for a month over years</h5>
+                                            </div>
+                                        </div>
+
+                                        <div className='chart_year_container' >
+                                            <label>Month: &nbsp; </label>
+                                            <select value={selectedMonth} onChange={handleMonthSelection} style={{ marginRight: "10px" }}>
+                                                {months.map((month, index) => (
+                                                    <option value={index + 1} key={index}>
+                                                        {month}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                        </div>
+                                        <ReactApexChart options={{
+                                            chart: {
+                                                height: '100%',
+                                                type: 'bar',
+                                                zoom: {
+                                                    enabled: false, // Disable zoom on scroll
+                                                },
+                                            },
+                                            stroke: {
+                                                curve: 'straight',
+                                                width: 2
+                                            },
+                                            plotOptions: {
+                                                bar: {
+                                                    dataLabels: {
+                                                        position: 'top',
+                                                    }
+                                                }
+                                            },
+                                            dataLabels: {
+                                                enabled: true,
+                                                formatter: function (val) {
+                                                    return `${Math.round(val)}`;
+                                                },
+                                                offsetY: -20,
+                                                background: {
+                                                    enabled: true,
+                                                    foreColor: '#000', // Sets the text foreground color
+                                                    borderRadius: 2,
+                                                    padding: 4,
+                                                    opacity: 0.7,
+                                                    borderWidth: 1,
+                                                    borderColor: '#fff'
+                                                }
+                                            },
+
+                                            xaxis: {
+
+                                                categories: [2021, 2022, 2023],
+                                                labels: {
+                                                    rotate: 0,
+                                                },
+                                                tickPlacement: 'on',
+                                            },
+
+
+                                            yaxis: {
+                                                title: {
+                                                    text: `Water consumption (IG)`,
+                                                },
+                                                labels: {
+                                                    formatter: function (val) {
+                                                        return Math.round(val); // Rounds to the nearest integer
+                                                    },
+                                                },
+                                            },
+                                            tooltip: {
+                                                shared: true,
+                                                intersect: false,
+
+                                            },
+
+                                        }} series={[
+                                            {
+                                                name: `${months[selectedMonth - 1]} Water consumption (IG)`,
+                                                type: 'bar',
+                                                data: getSelectedMonthData(selectedPointData.WATER, selectedMonth),
+                                                color: '#ba7c00',
+
+                                            },
+                                        ]} type="bar" />
+
+
 
                                     </>
 

@@ -33,3 +33,26 @@ export const calculateAverageOfArray = (arr) => {
   const average = sum / arr.length;
   return parseFloat(average.toFixed(3));
 };
+
+
+
+export const getSumAnnualDataFromMonthly = (monthlyData) => {
+  console.log(monthlyData)
+  const annualData = {};
+
+  if (monthlyData !== "NA" && Array.isArray(monthlyData)) {
+    monthlyData.forEach((value, index) => {
+      const year = Math.floor(index / 12) + 2021; // Calculate year based on index
+      if (!annualData[year]) {
+        annualData[year] = 0; // Initialize year in annualData if not already present
+      }
+      annualData[year] += value; // Aggregate data for the year
+    });
+
+    // Return the accumulated values, rounded to two decimal places
+    return Object.values(annualData).map(value => Math.round(value));
+  }
+
+  // Return an empty array or another appropriate default value if data is "NA" or invalid
+  return [];
+}
